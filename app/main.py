@@ -264,3 +264,55 @@ async def get_tags_json(filename: str):
             return metadata
 
     return {"error": "Metadata not found for this file"}
+
+
+# Add this to app/main.py
+# Create a new API endpoint for tag search/autocomplete
+
+
+@app.get("/api/search_tags/{filename}")
+async def search_tags(filename: str, query: str = ""):
+    """
+    Search for tags matching the query string in the specified file.
+    Returns both main topics and subject info that match the query.
+    """
+    base_name = os.path.splitext(filename)[0]
+    metadata_path = os.path.join(METADATA_DIR, f"{base_name}_tags.json")
+
+    if not os.path.exists(metadata_path):
+        return {"error": "Metadata not found for this file", "suggestions": []}
+
+    with open(metadata_path, "r", encoding="utf-8") as f:
+        metadata = json.load(f)
+
+    query = query.lower()
+    main_topic_suggestions = []
+    subject_info_suggestions = []
+
+    # Only process valid tags (not error tags)
+    valid_tags = [
+        tag
+        for tag in metadata.get("tags", [])
+        if tag["name"] not in metadata.get("opening_errors", [])
+        and tag["name"] not in metadata.get("closing_errors", [])
+    ]
+
+    # Process main topics for suggestions
+    for tag in valid_tags:
+        for main_topic in tag.get("main_topics", []):
+            if query in main_topic.lower() and main_topic not in main_topic_suggestions:
+                main_topic_suggestions.append(main_topic)
+
+        # Process subject info for suggestions
+        for subject in tag.get("subject_info", []):
+            if query in subject.lower() and subject not in subject_info_suggestions:
+                subject_info_suggestions.append(subject)
+
+    # Sort suggestions alphabetically
+    main_topic_suggestions.sort()
+    subject_info_suggestions.sort()
+
+    return {
+        "main_topic_suggestions": main_topic_suggestions,
+        "subject_info_suggestions": subject_info_suggestions,
+    }

@@ -189,25 +189,24 @@ class DocumentTags:
             if not tag.main_topics:
                 continue
 
-            # Get the first main topic as the primary category
-            main_topic = tag.main_topics[0]
+            # For each main topic in the tag, add an entry to the organized dict
+            for main_topic in tag.main_topics:
+                # Initialize the main topic if not present
+                if main_topic not in organized:
+                    organized[main_topic] = []
 
-            # Initialize the main topic if not present
-            if main_topic not in organized:
-                organized[main_topic] = []
+                # Create entry for this tag instance
+                tag_entry = {
+                    "full_tag": tag.name,
+                    "subject_info": tag.subject_info,
+                    "remaining_main_topics": [
+                        topic for topic in tag.main_topics if topic != main_topic
+                    ],
+                    "start_positions": tag.start_positions,
+                    "end_positions": tag.end_positions,
+                    "pairs": tag.pairs,
+                }
 
-            # Create entry for this tag instance
-            tag_entry = {
-                "full_tag": tag.name,
-                "subject_info": tag.subject_info,
-                "remaining_main_topics": (
-                    tag.main_topics[1:] if len(tag.main_topics) > 1 else []
-                ),
-                "start_positions": tag.start_positions,
-                "end_positions": tag.end_positions,
-                "pairs": tag.pairs,
-            }
-
-            organized[main_topic].append(tag_entry)
+                organized[main_topic].append(tag_entry)
 
         return organized

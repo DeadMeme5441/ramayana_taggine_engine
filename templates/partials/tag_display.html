@@ -13,6 +13,41 @@
                     </div>
                 {% endif %}
             </div>
+
+            <!-- Search box for tags -->
+            <div class="mt-3 relative">
+                <div class="flex">
+                    <input
+                        type="text"
+                        id="tag-search-input"
+                        placeholder="Search for tags..."
+                        class="w-full border border-secondary rounded-l px-3 py-1 focus:outline-none focus:ring-1 focus:ring-primary"
+                        autocomplete="off"
+                    >
+                    <button
+                        id="tag-search-button"
+                        class="bg-primary text-white px-3 py-1 rounded-r hover:bg-primary/80"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+                        </svg>
+                    </button>
+                </div>
+
+                <!-- Autocomplete dropdown -->
+                <div id="tag-autocomplete-dropdown" class="hidden absolute z-10 bg-white shadow-md rounded-md w-full mt-1 max-h-48 overflow-y-auto border border-light"></div>
+
+                <!-- Reset search button - only visible when search is active -->
+                <button
+                    id="tag-reset-search"
+                    class="hidden absolute right-12 top-1 text-gray-400 hover:text-primary"
+                    title="Clear search"
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
         </div>
 
         <!-- Scrollable sections container -->
@@ -22,26 +57,26 @@
                 <h4 class="font-semibold text-sm text-primary mb-2 pb-1 border-b border-primary/20">Valid Tags</h4>
 
                 {% if file_data.metadata.organized_tags %}
-                    <div class="space-y-2">
+                    <div class="space-y-2" id="tags-container">
                         {% for main_topic, tags in file_data.metadata.organized_tags.items() %}
-                            <div class="bg-green-50 rounded overflow-hidden">
+                            <div class="bg-green-50 rounded overflow-hidden tag-group" data-main-topic="{{ main_topic }}">
                                 <!-- Main topic header (collapsible) -->
-                                <div class="p-2 bg-green-100 font-medium flex justify-between items-center cursor-pointer"
-                                     onclick="toggleCollapse('tag-group-{{ loop.index }}')">
-                                    <span class="font-mono">{{ main_topic }}</span>
+                                <div class="p-2 bg-green-100 font-medium flex justify-between items-center cursor-pointer tag-header"
+                                     data-target="tag-group-{{ loop.index }}" data-icon="tag-icon-{{ loop.index }}">
+                                    <span class="font-mono main-topic-label">{{ main_topic }}</span>
                                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 transform transition-transform" id="tag-icon-{{ loop.index }}" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
                                     </svg>
                                 </div>
 
                                 <!-- Collapsible content -->
-                                <div id="tag-group-{{ loop.index }}" class="hidden">
+                                <div id="tag-group-{{ loop.index }}" class="hidden tag-content">
                                     <ul class="divide-y divide-green-100">
                                         {% for tag in tags %}
-                                            <li class="p-2 hover:bg-green-50">
+                                            <li class="p-2 hover:bg-green-50 tag-item" data-subject-info="{{ tag.subject_info|join(' ') }}">
                                                 {% if tag.subject_info %}
                                                     {% for info in tag.subject_info %}
-                                                        <div class="text-sm">{{ info }}</div>
+                                                        <div class="text-sm subject-info-text">{{ info }}</div>
                                                     {% endfor %}
                                                 {% else %}
                                                     <div class="text-sm text-gray-500 italic">No additional info</div>
@@ -94,6 +129,321 @@
             </div>
         </div>
     </div>
+
+    <!-- JavaScript for tag search and autocomplete -->
+    <script>
+    // Initialize tag search functionality
+    function initTagSearch() {
+        try {
+            console.log("Initializing tag search...");
+
+            // Get DOM elements
+            const searchInput = document.getElementById('tag-search-input');
+            const autocompleteDropdown = document.getElementById('tag-autocomplete-dropdown');
+            const searchButton = document.getElementById('tag-search-button');
+            const resetSearchButton = document.getElementById('tag-reset-search');
+
+            if (!searchInput || !autocompleteDropdown || !searchButton || !resetSearchButton) {
+                console.error("Failed to find search elements", {
+                    searchInput, autocompleteDropdown, searchButton, resetSearchButton
+                });
+                return;
+            }
+
+            const tagGroups = document.querySelectorAll('.tag-group');
+            const tagItems = document.querySelectorAll('.tag-item');
+            const tagHeaders = document.querySelectorAll('.tag-header');
+
+            let debounceTimer;
+            let currentFile = '{{ active_file }}';
+
+            // Set up collapsible tag headers
+            tagHeaders.forEach(header => {
+                header.addEventListener('click', function() {
+                    const targetId = this.getAttribute('data-target');
+                    const iconId = this.getAttribute('data-icon');
+                    toggleCollapse(targetId, iconId);
+                });
+            });
+
+            // Function to toggle collapse state
+            function toggleCollapse(targetId, iconId) {
+                try {
+                    const contentElement = document.getElementById(targetId);
+                    const iconElement = document.getElementById(iconId);
+
+                    if (!contentElement || !iconElement) {
+                        console.error("Toggle elements not found", { targetId, iconId });
+                        return;
+                    }
+
+                    if (contentElement.classList.contains('hidden')) {
+                        contentElement.classList.remove('hidden');
+                        iconElement.classList.add('rotate-180');
+                    } else {
+                        contentElement.classList.add('hidden');
+                        iconElement.classList.remove('rotate-180');
+                    }
+                } catch (err) {
+                    console.error("Error in toggleCollapse", err);
+                }
+            }
+
+            // Function to show autocomplete suggestions
+            function fetchSuggestions(query) {
+                if (query.length < 1) {
+                    autocompleteDropdown.innerHTML = '';
+                    autocompleteDropdown.classList.add('hidden');
+                    return;
+                }
+
+                clearTimeout(debounceTimer);
+                debounceTimer = setTimeout(() => {
+                    console.log("Fetching suggestions for:", query);
+
+                    // Call API for suggestions
+                    fetch(`/api/search_tags/${currentFile}?query=${encodeURIComponent(query)}`)
+                        .then(response => {
+                            if (!response.ok) {
+                                throw new Error(`HTTP error! status: ${response.status}`);
+                            }
+                            return response.json();
+                        })
+                        .then(data => {
+                            console.log("Received suggestions:", data);
+                            autocompleteDropdown.innerHTML = '';
+
+                            // Add main topic suggestions
+                            if (data.main_topic_suggestions && data.main_topic_suggestions.length > 0) {
+                                const topicHeader = document.createElement('div');
+                                topicHeader.className = 'px-2 py-1 bg-light text-primary font-medium text-xs';
+                                topicHeader.textContent = 'Main Tags';
+                                autocompleteDropdown.appendChild(topicHeader);
+
+                                data.main_topic_suggestions.forEach(topic => {
+                                    const suggItem = document.createElement('div');
+                                    suggItem.className = 'px-3 py-1 hover:bg-accent/20 cursor-pointer text-sm';
+                                    suggItem.textContent = topic;
+                                    suggItem.setAttribute('data-type', 'main');
+                                    suggItem.addEventListener('click', () => selectSuggestion(topic, 'main'));
+                                    autocompleteDropdown.appendChild(suggItem);
+                                });
+                            }
+
+                            // Add subject info suggestions
+                            if (data.subject_info_suggestions && data.subject_info_suggestions.length > 0) {
+                                const infoHeader = document.createElement('div');
+                                infoHeader.className = 'px-2 py-1 bg-light text-primary font-medium text-xs';
+                                infoHeader.textContent = 'Subject Info';
+                                autocompleteDropdown.appendChild(infoHeader);
+
+                                data.subject_info_suggestions.forEach(info => {
+                                    const suggItem = document.createElement('div');
+                                    suggItem.className = 'px-3 py-1 hover:bg-accent/20 cursor-pointer text-sm';
+                                    suggItem.textContent = info;
+                                    suggItem.setAttribute('data-type', 'info');
+                                    suggItem.addEventListener('click', () => selectSuggestion(info, 'info'));
+                                    autocompleteDropdown.appendChild(suggItem);
+                                });
+                            }
+
+                            // Show dropdown if we have suggestions
+                            if (autocompleteDropdown.children.length > 0) {
+                                autocompleteDropdown.classList.remove('hidden');
+                            } else {
+                                autocompleteDropdown.classList.add('hidden');
+                            }
+                        })
+                        .catch(error => {
+                            console.error("Error fetching suggestions:", error);
+                        });
+                }, 200);
+            }
+
+            // Handle selection from autocomplete
+            function selectSuggestion(value, type) {
+                searchInput.value = value;
+                autocompleteDropdown.classList.add('hidden');
+                performSearch(value, type);
+            }
+
+            // Perform search on tag data
+            function performSearch(query, type = null) {
+                console.log("Performing search:", { query, type });
+
+                if (!query) {
+                    resetSearch();
+                    return;
+                }
+
+                query = query.toLowerCase();
+
+                // Show reset button
+                resetSearchButton.classList.remove('hidden');
+
+                // Filter tag groups and items
+                let hasVisibleGroups = false;
+
+                tagGroups.forEach(group => {
+                    const mainTopic = group.getAttribute('data-main-topic').toLowerCase();
+                    const items = group.querySelectorAll('.tag-item');
+
+                    // For main topic search
+                    let isMainTopicMatch = mainTopic.includes(query);
+                    let hasVisibleItems = false;
+
+                    // Check each subject info in this group
+                    items.forEach(item => {
+                        const subjectInfo = item.getAttribute('data-subject-info').toLowerCase();
+                        const isSubjectMatch = subjectInfo.includes(query);
+
+                        // Show/hide based on match type:
+                        // - For main topic match: show ALL items in the group
+                        // - For subject info match: show only matching items
+                        if (isSubjectMatch || (isMainTopicMatch && (type === 'main' || type === null))) {
+                            item.style.display = '';
+                            hasVisibleItems = true;
+                        } else {
+                            // Only hide items if we're not searching for their parent main topic
+                            if (!isMainTopicMatch || (type === 'info')) {
+                                item.style.display = 'none';
+                            }
+                        }
+                    });
+
+                    // Show/hide the group based on matches
+                    if ((type === 'main' && isMainTopicMatch) ||
+                        (type === 'info' && hasVisibleItems) ||
+                        (type === null && (isMainTopicMatch || hasVisibleItems))) {
+                        group.style.display = '';
+                        hasVisibleGroups = true;
+
+                        // Get content and icon elements using data attributes
+                        const header = group.querySelector('.tag-header');
+                        if (header) {
+                            const contentId = header.getAttribute('data-target');
+                            const iconId = header.getAttribute('data-icon');
+                            const contentElement = document.getElementById(contentId);
+                            const iconElement = document.getElementById(iconId);
+
+                            // Expand the group in these cases:
+                            // 1. When searching by info and we found matches
+                            // 2. When searching by main topic and this main topic matches
+                            if (contentElement && iconElement &&
+                                ((type === 'info' && hasVisibleItems) ||
+                                (isMainTopicMatch && (type === 'main' || type === null)))) {
+                                contentElement.classList.remove('hidden');
+                                iconElement.classList.add('rotate-180');
+                            }
+                        }
+                    } else {
+                        group.style.display = 'none';
+                    }
+                });
+
+                // Show message if no results
+                const noResultsMessage = document.getElementById('no-results-message');
+                if (!hasVisibleGroups) {
+                    if (!noResultsMessage) {
+                        const message = document.createElement('p');
+                        message.id = 'no-results-message';
+                        message.className = 'text-center p-4 text-gray-500';
+                        message.textContent = 'No matching tags found';
+                        const container = document.getElementById('tags-container');
+                        if (container) {
+                            container.appendChild(message);
+                        }
+                    }
+                } else if (noResultsMessage) {
+                    noResultsMessage.remove();
+                }
+            }
+
+            // Reset search and show all tags
+            function resetSearch() {
+                searchInput.value = '';
+                resetSearchButton.classList.add('hidden');
+
+                // Show all tag groups and items
+                tagGroups.forEach(group => {
+                    group.style.display = '';
+                    const items = group.querySelectorAll('.tag-item');
+                    items.forEach(item => {
+                        item.style.display = '';
+                    });
+
+                    // Collapse all groups back to default state
+                    const header = group.querySelector('.tag-header');
+                    if (header) {
+                        const contentId = header.getAttribute('data-target');
+                        const iconId = header.getAttribute('data-icon');
+                        const contentElement = document.getElementById(contentId);
+                        const iconElement = document.getElementById(iconId);
+
+                        if (contentElement && iconElement) {
+                            contentElement.classList.add('hidden');
+                            iconElement.classList.remove('rotate-180');
+                        }
+                    }
+                });
+
+                // Remove no results message if present
+                const noResultsMessage = document.getElementById('no-results-message');
+                if (noResultsMessage) {
+                    noResultsMessage.remove();
+                }
+            }
+
+            // Event listeners
+            searchInput.addEventListener('input', (e) => {
+                fetchSuggestions(e.target.value);
+            });
+
+            searchInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    autocompleteDropdown.classList.add('hidden');
+                    performSearch(searchInput.value);
+                } else if (e.key === 'Escape') {
+                    autocompleteDropdown.classList.add('hidden');
+                }
+            });
+
+            searchButton.addEventListener('click', () => {
+                performSearch(searchInput.value);
+                autocompleteDropdown.classList.add('hidden');
+            });
+
+            resetSearchButton.addEventListener('click', resetSearch);
+
+            // Close autocomplete when clicking outside
+            document.addEventListener('click', (e) => {
+                if (!searchInput.contains(e.target) && !autocompleteDropdown.contains(e.target)) {
+                    autocompleteDropdown.classList.add('hidden');
+                }
+            });
+
+            console.log("Tag search initialized successfully");
+        } catch (error) {
+            console.error("Error initializing tag search:", error);
+        }
+    }
+
+    // For direct page load
+    if (document.readyState === 'complete' || document.readyState === 'interactive') {
+        initTagSearch();
+    } else {
+        document.addEventListener('DOMContentLoaded', initTagSearch);
+    }
+
+    // For HTMX content swaps
+    document.addEventListener('htmx:afterSwap', function(event) {
+        if (event.detail.target.id === 'tags-container' || event.detail.target.contains(document.getElementById('tags-container'))) {
+            console.log("HTMX content swapped, reinitializing tag search");
+            setTimeout(initTagSearch, 0);
+        }
+    });
+    </script>
 {% elif active_file %}
     <div class="h-full flex flex-col">
         <div class="p-4 border-b">
@@ -118,20 +468,3 @@
         <p class="text-gray-500">No file selected</p>
     </div>
 {% endif %}
-
-<!-- JavaScript for collapsible sections -->
-<script>
-function toggleCollapse(id) {
-    const element = document.getElementById(id);
-    const iconId = id.replace('tag-group', 'tag-icon');
-    const icon = document.getElementById(iconId);
-
-    if (element.classList.contains('hidden')) {
-        element.classList.remove('hidden');
-        icon.classList.add('rotate-180');
-    } else {
-        element.classList.add('hidden');
-        icon.classList.remove('rotate-180');
-    }
-}
-</script>

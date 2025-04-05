@@ -64,3 +64,24 @@ html, body {
 .htmx-request.htmx-indicator {
     opacity: 1
 }
+
+/* Autocomplete dropdown styles */
+#autocomplete-dropdown {
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    z-index: 50;
+}
+
+#autocomplete-dropdown div:not(.bg-light) {
+    transition: background-color 0.2s;
+}
+
+#autocomplete-dropdown div:hover:not(.bg-light) {
+    background-color: #f4e9db;
+}
+
+/* Search highlight styling */
+.highlight-match {
+    background-color: #fcd34d;
+    padding: 0 2px;
+    border-radius: 2px;
+}
