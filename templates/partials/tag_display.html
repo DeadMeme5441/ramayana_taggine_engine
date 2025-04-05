@@ -1,0 +1,137 @@
+<!-- templates/partials/tag_display.html -->
+{% if active_file and file_data.metadata %}
+    <div class="h-full flex flex-col overflow-hidden">
+        <div class="p-4 border-b">
+            <h3 class="font-bold text-primary">Tag Information</h3>
+            <div class="flex gap-2 items-center mt-2">
+                <div class="bg-primary/20 text-primary px-2 py-1 rounded text-sm">
+                    {{ file_data.metadata.tags | length }} tags found
+                </div>
+                {% if file_data.metadata.opening_errors or file_data.metadata.closing_errors %}
+                    <div class="bg-red-100 text-red-800 px-2 py-1 rounded text-sm">
+                        {{ file_data.metadata.opening_errors | length + file_data.metadata.closing_errors | length }} errors
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Scrollable sections container -->
+        <div class="flex-grow flex flex-col overflow-hidden">
+            <!-- Valid tags section (organized by main topics) -->
+            <div class="flex-1 overflow-auto p-4 border-b">
+                <h4 class="font-semibold text-sm text-primary mb-2 pb-1 border-b border-primary/20">Valid Tags</h4>
+
+                {% if file_data.metadata.organized_tags %}
+                    <div class="space-y-2">
+                        {% for main_topic, tags in file_data.metadata.organized_tags.items() %}
+                            <div class="bg-green-50 rounded overflow-hidden">
+                                <!-- Main topic header (collapsible) -->
+                                <div class="p-2 bg-green-100 font-medium flex justify-between items-center cursor-pointer"
+                                     onclick="toggleCollapse('tag-group-{{ loop.index }}')">
+                                    <span class="font-mono">{{ main_topic }}</span>
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 transform transition-transform" id="tag-icon-{{ loop.index }}" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                    </svg>
+                                </div>
+
+                                <!-- Collapsible content -->
+                                <div id="tag-group-{{ loop.index }}" class="hidden">
+                                    <ul class="divide-y divide-green-100">
+                                        {% for tag in tags %}
+                                            <li class="p-2 hover:bg-green-50">
+                                                {% if tag.subject_info %}
+                                                    {% for info in tag.subject_info %}
+                                                        <div class="text-sm">{{ info }}</div>
+                                                    {% endfor %}
+                                                {% else %}
+                                                    <div class="text-sm text-gray-500 italic">No additional info</div>
+                                                {% endif %}
+                                            </li>
+                                        {% endfor %}
+                                    </ul>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="text-xs text-gray-500 italic">No valid tags found</p>
+                {% endif %}
+            </div>
+
+            <!-- Error tags section -->
+            <div class="flex-1 overflow-auto p-4">
+                <h4 class="font-semibold text-sm text-red-800 mb-2 pb-1 border-b border-red-200">Tag Errors</h4>
+
+                {% if file_data.metadata.opening_errors %}
+                    <div class="mb-3">
+                        <p class="text-xs font-medium mb-1">Missing closing tags:</p>
+                        <ul class="space-y-1 text-sm">
+                            {% for tag_name in file_data.metadata.opening_errors %}
+                                <li class="p-1 bg-red-50 rounded">
+                                    <span class="font-mono">{{ tag_name }}</span>
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                {% endif %}
+
+                {% if file_data.metadata.closing_errors %}
+                    <div>
+                        <p class="text-xs font-medium mb-1">Missing opening tags:</p>
+                        <ul class="space-y-1 text-sm">
+                            {% for tag_name in file_data.metadata.closing_errors %}
+                                <li class="p-1 bg-red-50 rounded">
+                                    <span class="font-mono">{{ tag_name }}</span>
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                {% endif %}
+
+                {% if not file_data.metadata.opening_errors and not file_data.metadata.closing_errors %}
+                    <p class="text-xs text-gray-500 italic">No tag errors found</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+{% elif active_file %}
+    <div class="h-full flex flex-col">
+        <div class="p-4 border-b">
+            <h3 class="font-bold text-primary">Tag Information</h3>
+        </div>
+        <div class="flex-grow flex items-center justify-center">
+            <div class="text-center p-4 text-gray-500">
+                <p>No tag information available</p>
+                <button
+                    hx-post="/process/{{ active_file }}"
+                    hx-target="#content-container"
+                    class="mt-2 bg-primary text-white px-3 py-1 rounded hover:bg-primary/80 text-sm"
+                    onclick="setTimeout(function() { htmx.ajax('GET', '/view_tags/{{ active_file }}', {target: '#tags-container', swap: 'innerHTML'}) }, 100)"
+                >
+                    Process Tags
+                </button>
+            </div>
+        </div>
+    </div>
+{% else %}
+    <div class="h-full flex items-center justify-center">
+        <p class="text-gray-500">No file selected</p>
+    </div>
+{% endif %}
+
+<!-- JavaScript for collapsible sections -->
+<script>
+function toggleCollapse(id) {
+    const element = document.getElementById(id);
+    const iconId = id.replace('tag-group', 'tag-icon');
+    const icon = document.getElementById(iconId);
+
+    if (element.classList.contains('hidden')) {
+        element.classList.remove('hidden');
+        icon.classList.add('rotate-180');
+    } else {
+        element.classList.add('hidden');
+        icon.classList.remove('rotate-180');
+    }
+}
+</script>

@@ -103,6 +103,9 @@ async def home(request: Request):
     file_data = {"content": "", "metadata": None}
     active_file = ""
 
+    # Check for error parameter
+    upload_error = request.query_params.get("error")
+
     # If there are files, display the first one by default
     if files:
         active_file = files[0]["name"]
@@ -115,6 +118,7 @@ async def home(request: Request):
             "files": files,
             "file_data": file_data,
             "active_file": active_file,
+            "upload_error": upload_error,
         },
     )
 
@@ -137,8 +141,8 @@ async def view_file(request: Request, filename: str):
 
 
 # Get file content (for HTMX requests)
-@app.get("/content/{filename}", response_class=HTMLResponse)
-async def get_content(request: Request, filename: str):
+@app.get("/view_content/{filename}", response_class=HTMLResponse)
+async def view_content(request: Request, filename: str):
     file_data = read_file_with_metadata(filename)
 
     return templates.TemplateResponse(
@@ -147,8 +151,19 @@ async def get_content(request: Request, filename: str):
     )
 
 
+# Get tags (for HTMX requests)
+@app.get("/view_tags/{filename}", response_class=HTMLResponse)
+async def view_tags(request: Request, filename: str):
+    file_data = read_file_with_metadata(filename)
+
+    return templates.TemplateResponse(
+        "partials/tag_display.html",
+        {"request": request, "file_data": file_data, "active_file": filename},
+    )
+
+
 # Upload file endpoint
-@app.post("/upload", response_class=HTMLResponse)
+@app.post("/upload")
 async def upload_file(request: Request, file: UploadFile = File(...)):
     try:
         # Save the uploaded file
@@ -166,20 +181,16 @@ async def upload_file(request: Request, file: UploadFile = File(...)):
             print(f"Error processing tags: {str(e)}")
             # Continue even if tag processing fails
 
-        # Get updated file list
-        files = get_all_files()
+        # Redirect to home page to refresh everything
+        from fastapi.responses import RedirectResponse
 
-        # Return the updated file list (not the content, which will be loaded separately)
-        return templates.TemplateResponse(
-            "partials/file_list.html",
-            {"request": request, "files": files, "active_file": file.filename},
-        )
+        return RedirectResponse(url="/", status_code=303)
     except Exception as e:
-        files = get_all_files()
-        return templates.TemplateResponse(
-            "partials/file_list.html",
-            {"request": request, "files": files, "upload_error": str(e)},
-        )
+        print(f"Upload error: {str(e)}")
+        # Redirect to home page even on error
+        from fastapi.responses import RedirectResponse
+
+        return RedirectResponse(url=f"/?error={str(e)}", status_code=303)
 
 
 # Delete file endpoint
@@ -200,13 +211,10 @@ async def delete_file(request: Request, filename: str):
         # Get updated file list
         files = get_all_files()
 
-        # If there are files, set active_file to the first one
-        active_file = files[0]["name"] if files else ""
-
         # Return the updated file list
         return templates.TemplateResponse(
             "partials/file_list.html",
-            {"request": request, "files": files, "active_file": active_file},
+            {"request": request, "files": files, "active_file": ""},
         )
     except Exception as e:
         files = get_all_files()

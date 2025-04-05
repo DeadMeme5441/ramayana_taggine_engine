@@ -30,24 +30,29 @@
         }
     </script>
 </head>
-<body class="bg-light text-dark min-h-screen flex flex-col">
+<body class="bg-light text-dark h-screen flex flex-col overflow-hidden">
     <!-- Header -->
-    <header class="bg-primary text-white p-4 shadow-md">
+    <header class="bg-primary text-white p-3 shadow-md">
         <div class="container mx-auto">
             <h1 class="text-2xl font-bold">Ramayana Tagging Engine</h1>
         </div>
     </header>
 
-    <!-- Main Content -->
-    <main class="container mx-auto flex-grow p-4 flex flex-row gap-4">
-        <!-- Sidebar with file list -->
-        <div class="w-1/5 bg-white rounded shadow-md p-4 overflow-auto">
+    <!-- Main Content - 3 Column Layout -->
+    <main class="flex-grow flex overflow-hidden">
+        <!-- Left Column: File List -->
+        <div id="file-list-container" class="w-1/5 bg-white shadow-md flex flex-col overflow-hidden border-r">
             {% include "partials/file_list.html" %}
         </div>
 
-        <!-- File content and tags display -->
-        <div class="w-4/5 bg-white rounded shadow-md p-4 overflow-hidden">
+        <!-- Middle Column: File Content -->
+        <div id="content-container" class="w-2/5 bg-white flex-grow overflow-hidden border-r">
             {% include "partials/content.html" %}
+        </div>
+
+        <!-- Right Column: Tags -->
+        <div id="tags-container" class="w-2/5 bg-white shadow-md flex flex-col overflow-hidden">
+            {% include "partials/tag_display.html" %}
         </div>
     </main>
 
@@ -72,8 +77,14 @@
                     if (fileLink) {
                         const fileName = fileLink.textContent.trim();
                         // Trigger content load for the new file
-                        htmx.ajax('GET', `/content/${fileName}`, {
+                        htmx.ajax('GET', `/view_content/${fileName}`, {
                             target: '#content-container',
+                            swap: 'innerHTML'
+                        });
+
+                        // Also load tags
+                        htmx.ajax('GET', `/view_tags/${fileName}`, {
+                            target: '#tags-container',
                             swap: 'innerHTML'
                         });
                     }

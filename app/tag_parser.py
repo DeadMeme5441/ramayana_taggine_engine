@@ -13,6 +13,41 @@ class Tag:
         self.end_positions = []
         self.pairs = []
 
+        # New attributes for categorized tag content
+        self.main_topics = []
+        self.subject_info = []
+
+        # Process tag name to extract main topics and subject/information
+        self._process_tag_content()
+
+    def _process_tag_content(self):
+        """Parse tag name to extract main topics (no spaces) and subject/information (with spaces)"""
+        if not self.name:
+            return
+
+        # Split tag content by semicolon
+        parts = self.name.split(";")
+        parts = [part.strip() for part in parts if part.strip()]
+
+        # If there's only one item, it's a main topic regardless of spaces
+        if len(parts) == 1:
+            self.main_topics.append(parts[0])
+            return
+
+        # For multiple items, first categorize according to spaces
+        for part in parts:
+            # If part contains no spaces, it's a main topic
+            if " " not in part:
+                self.main_topics.append(part)
+            else:
+                # If part contains spaces, it's subject/information
+                self.subject_info.append(part)
+
+        # If we have no subject_info items but multiple main_topics,
+        # move the last main_topic to subject_info
+        if len(self.main_topics) > 1 and not self.subject_info:
+            self.subject_info.append(self.main_topics.pop())
+
     def add_start_position(self, position: int):
         self.start_positions.append(position)
 
@@ -35,6 +70,8 @@ class Tag:
             "start_positions": self.start_positions,
             "end_positions": self.end_positions,
             "pairs": self.pairs,
+            "main_topics": self.main_topics,
+            "subject_info": self.subject_info,
         }
 
 
@@ -118,15 +155,59 @@ class DocumentTags:
         base_name = os.path.splitext(self.file_name)[0]
         output_path = os.path.join(output_dir, f"{base_name}_tags.json")
 
+        # Generate organized tag structure
+        organized_tags = self._generate_organized_tags()
+
         metadata = {
             "file_name": self.file_name,
             "file_path": self.file_path,
             "tags": [tag.to_dict() for tag in self.tags],
             "opening_errors": self.opening_errors,
             "closing_errors": self.closing_errors,
+            "organized_tags": organized_tags,
         }
 
         with open(output_path, "w", encoding="utf-8") as f:
             json.dump(metadata, f, indent=2, ensure_ascii=False)
 
         return output_path
+
+    def _generate_organized_tags(self):
+        """Generate a hierarchical organization of tags grouped by main topics."""
+        organized = {}
+
+        # Only process tags without errors
+        valid_tags = [
+            tag
+            for tag in self.tags
+            if tag.name not in self.opening_errors
+            and tag.name not in self.closing_errors
+        ]
+
+        for tag in valid_tags:
+            # Skip tags with no main topics
+            if not tag.main_topics:
+                continue
+
+            # Get the first main topic as the primary category
+            main_topic = tag.main_topics[0]
+
+            # Initialize the main topic if not present
+            if main_topic not in organized:
+                organized[main_topic] = []
+
+            # Create entry for this tag instance
+            tag_entry = {
+                "full_tag": tag.name,
+                "subject_info": tag.subject_info,
+                "remaining_main_topics": (
+                    tag.main_topics[1:] if len(tag.main_topics) > 1 else []
+                ),
+                "start_positions": tag.start_positions,
+                "end_positions": tag.end_positions,
+                "pairs": tag.pairs,
+            }
+
+            organized[main_topic].append(tag_entry)
+
+        return organized
