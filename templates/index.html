@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple File Viewer</title>
+
+    <!-- HTMX for interactivity -->
+    <script src="https://unpkg.com/htmx.org@1.9.6"></script>
+
+    <!-- Tailwind CSS via CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Custom styling -->
+    <link rel="stylesheet" href="/static/css/style.css">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#6b4226',
+                        secondary: '#c19a6b',
+                        accent: '#e3bc9a',
+                        light: '#f4e9db',
+                        dark: '#2a1e17',
+                    },
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-light text-dark min-h-screen flex flex-col">
+    <!-- Header -->
+    <header class="bg-primary text-white p-4 shadow-md">
+        <div class="container mx-auto">
+            <h1 class="text-2xl font-bold">Simple File Viewer</h1>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="container mx-auto flex-grow p-4 flex flex-col md:flex-row gap-4">
+        <!-- Sidebar with file list and upload -->
+        <div class="md:w-1/4 bg-white rounded shadow-md p-4 overflow-auto">
+            <div class="mb-6 p-3 bg-accent/20 rounded">
+                <h3 class="font-bold text-primary mb-2">Upload File</h3>
+                <form
+                    hx-post="/upload"
+                    hx-encoding="multipart/form-data"
+                    hx-target="#file-list"
+                    hx-swap="outerHTML"
+                    class="space-y-2"
+                >
+                    <input
+                        type="file"
+                        name="file"
+                        class="w-full p-2 text-sm border rounded bg-white"
+                        required
+                    >
+                    <button
+                        type="submit"
+                        class="w-full py-2 px-4 bg-primary text-white rounded hover:bg-primary/80 transition-colors"
+                    >
+                        Upload
+                    </button>
+                </form>
+            </div>
+
+            <!-- File List -->
+            <div id="file-list">
+                {% include "partials/file_list.html" %}
+            </div>
+        </div>
+
+        <!-- File content display -->
+        <div class="md:w-3/4 bg-white rounded shadow-md p-4 overflow-auto">
+            <div id="file-content">
+                {% include "partials/content.html" %}
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-dark text-white p-2 text-center text-sm">
+        <div class="container mx-auto">
+            Simple File Viewer - FastAPI + HTMX
+        </div>
+    </footer>
+</body>
+</html>

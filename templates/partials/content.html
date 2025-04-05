@@ -1,0 +1,14 @@
+{% if active_file %}
+    <div class="mb-4 flex justify-between items-center">
+        <h2 class="text-xl font-bold text-primary">{{ active_file }}</h2>
+    </div>
+
+    <div class="bg-light p-4 rounded whitespace-pre-wrap font-mono text-sm">
+        {{ content }}
+    </div>
+{% else %}
+    <div class="text-center p-8 text-dark/50">
+        <p>No file selected</p>
+        <p class="text-sm mt-2">Upload a file or select one from the sidebar</p>
+    </div>
+{% endif %}

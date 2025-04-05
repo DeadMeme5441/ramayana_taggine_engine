@@ -1,0 +1,50 @@
+/* Basic layout styles */
+html, body {
+    height: 100%;
+}
+
+body {
+    display: flex;
+    flex-direction: column;
+}
+
+main {
+    flex: 1;
+}
+
+/* File content styling */
+#file-content {
+    max-height: calc(100vh - 12rem);
+    overflow: auto;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #f4e9db;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #c19a6b;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #6b4226;
+}
+
+/* HTMX indicator styles */
+.htmx-indicator {
+    opacity: 0;
+    transition: opacity 200ms ease-in;
+}
+.htmx-request .htmx-indicator {
+    opacity: 1
+}
+.htmx-request.htmx-indicator {
+    opacity: 1
+}
