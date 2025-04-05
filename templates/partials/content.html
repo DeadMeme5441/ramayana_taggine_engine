@@ -1,14 +1,102 @@
-{% if active_file %}
-    <div class="mb-4 flex justify-between items-center">
-        <h2 class="text-xl font-bold text-primary">{{ active_file }}</h2>
+<!-- templates/partials/content.html -->
+<div id="content-container" class="flex flex-grow space-x-4">
+    <!-- File content panel -->
+    <div class="flex-grow">
+        {% if active_file %}
+            <div class="mb-4">
+                <h2 class="text-xl font-bold text-primary">{{ active_file }}</h2>
+            </div>
+
+            <div class="bg-black text-white p-4 rounded whitespace-pre-wrap font-mono text-sm max-h-[calc(100vh-12rem)] overflow-auto">
+                {{ file_data.content }}
+            </div>
+        {% else %}
+            <div class="text-center p-8 text-dark/50">
+                <p>No file selected</p>
+                <p class="text-sm mt-2">Upload a file or select one from the sidebar</p>
+            </div>
+        {% endif %}
     </div>
 
-    <div class="bg-light p-4 rounded whitespace-pre-wrap font-mono text-sm">
-        {{ content }}
+    <!-- Tags panel -->
+    <div class="w-1/4 bg-white rounded shadow-md p-4 max-h-[calc(100vh-8rem)] overflow-auto">
+        <h3 class="font-bold text-primary mb-3">Tag Information</h3>
+
+        {% if file_data.metadata %}
+            <div class="mb-3">
+                <div class="flex gap-2 items-center mb-1">
+                    <div class="bg-primary/20 text-primary px-2 py-1 rounded text-sm">
+                        {{ file_data.metadata.tags | length }} tags found
+                    </div>
+                    {% if file_data.metadata.opening_errors or file_data.metadata.closing_errors %}
+                        <div class="bg-red-100 text-red-800 px-2 py-1 rounded text-sm">
+                            {{ file_data.metadata.opening_errors | length + file_data.metadata.closing_errors | length }} errors
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Valid tags section -->
+            <div class="mb-4">
+                <h4 class="font-semibold text-sm text-primary mb-2 border-b border-primary/20 pb-1">Valid Tags</h4>
+                <ul class="space-y-1 text-sm">
+                    {% set has_valid_tags = false %}
+                    {% for tag in file_data.metadata.tags %}
+                        {% if tag.name not in file_data.metadata.opening_errors and tag.name not in file_data.metadata.closing_errors %}
+                            {% set has_valid_tags = true %}
+                            <li class="p-1 bg-green-50 rounded">
+                                <span class="font-mono">{{ tag.name }}</span>
+                                <span class="text-xs text-gray-500 ml-1">({{ tag.pairs | length }} pairs)</span>
+                            </li>
+                        {% endif %}
+                    {% endfor %}
+                </ul>
+                {% if not has_valid_tags %}
+                    <p class="text-xs text-gray-500 italic">No valid tags found</p>
+                {% endif %}
+            </div>
+
+            <!-- Error tags section -->
+            {% if file_data.metadata.opening_errors or file_data.metadata.closing_errors %}
+                <div>
+                    <h4 class="font-semibold text-sm text-red-800 mb-2 border-b border-red-200 pb-1">Tag Errors</h4>
+
+                    {% if file_data.metadata.opening_errors %}
+                        <p class="text-xs font-medium mb-1">Missing closing tags:</p>
+                        <ul class="space-y-1 text-sm mb-3">
+                            {% for tag_name in file_data.metadata.opening_errors %}
+                                <li class="p-1 bg-red-50 rounded">
+                                    <span class="font-mono">{{ tag_name }}</span>
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    {% endif %}
+
+                    {% if file_data.metadata.closing_errors %}
+                        <p class="text-xs font-medium mb-1">Missing opening tags:</p>
+                        <ul class="space-y-1 text-sm">
+                            {% for tag_name in file_data.metadata.closing_errors %}
+                                <li class="p-1 bg-red-50 rounded">
+                                    <span class="font-mono">{{ tag_name }}</span>
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    {% endif %}
+                </div>
+            {% endif %}
+        {% else %}
+            <div class="text-center p-4 text-gray-500 text-sm">
+                <p>No tag information available</p>
+                {% if active_file %}
+                    <button
+                        hx-post="/process/{{ active_file }}"
+                        hx-target="#content-container"
+                        class="mt-2 bg-primary text-white px-3 py-1 rounded hover:bg-primary/80 text-sm"
+                    >
+                        Process Tags
+                    </button>
+                {% endif %}
+            </div>
+        {% endif %}
     </div>
-{% else %}
-    <div class="text-center p-8 text-dark/50">
-        <p>No file selected</p>
-        <p class="text-sm mt-2">Upload a file or select one from the sidebar</p>
-    </div>
-{% endif %}
+</div>
